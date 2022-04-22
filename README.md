@@ -7,13 +7,11 @@ Preprocess file has all the functions to preprocess the data and outputs them to
 If you want to skip the preprocessing time just run the main.py which imports the .pkl files
 
 ## Author
-
-    *  [@Aris_Kyriakopoulos](https://github.com/SneakyTattas)
+* [@Aris_Kyriakopoulos](https://github.com/SneakyTattas)
 
 ## Versions
-
-    * 0.1
-        * Initial Commit
-        * Done with Data Preprocessing
+* 0.1
+	* Initial Commit
+	* Done with Data Preprocessing
 
 ## Known Issues
