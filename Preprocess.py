@@ -120,11 +120,11 @@ def normalizeData(X_train):
     return X_trainNormalized
 
 #split dataframe into k chunks, we will then use each chunk as a testing set
-def kFoldCV(X_train, Y_train, k):
-    SplitSet = pd.DataFrame()
-    SplitSet["X_train"] = pd.DataFrame(np.array_split(X_train,k))
-    SplitSet["Y_train"] = pd.DataFrame(np.array_split(Y_train,k))
-    return SplitSet
+def makeDataframe(X_train, Y_train):
+    Dataset = pd.DataFrame()
+    Dataset["X_train"] = pd.Series(list(X_train))
+    Dataset["Y_train"] = pd.Series(list(Y_train))
+    return Dataset
 
 
 def preprocessData():
@@ -146,9 +146,9 @@ def preprocessData():
     X_trainNormalized = normalizeData(X_train)
     
     #5 fold CV split
-    rawSplitSet = kFoldCV(X_train,Y_train,5)
-    centeredSplitSet = kFoldCV(X_trainCentered,Y_train,5)
-    NormalizedSplitSet = kFoldCV(X_trainNormalized,Y_train,5)
+    rawSplitSet = makeDataframe(X_train,Y_train)
+    centeredSplitSet = makeDataframe(X_trainCentered,Y_train)
+    NormalizedSplitSet = makeDataframe(X_trainNormalized,Y_train)
 
     #save files
     rawSplitSet.to_pickle("SavedArrays\\rawSplitSet.pkl")
