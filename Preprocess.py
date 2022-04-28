@@ -1,8 +1,9 @@
 import pandas as pd
 import numpy as np
+import bz2
+import pickle
 import re
-from matplotlib import pyplot as plt
-from sklearn.preprocessing import MinMaxScaler, minmax_scale,StandardScaler
+from sklearn.preprocessing import MinMaxScaler,StandardScaler
 
 #variables
 Path = "DeliciousMIL\Data\\"
@@ -119,6 +120,12 @@ def normalizeData(X_train):
     X_trainNormalized = scaler.fit_transform(X_train)
     return X_trainNormalized
 
+#Standardization with mean=0 and std var=1
+def standardizeData(X_train):
+    scaler = StandardScaler()
+    X_trainStandardized = scaler.fit_transform(X_train)
+    return X_trainStandardized
+
 #split dataframe into k chunks, we will then use each chunk as a testing set
 def makeDataframe(X_train, Y_train):
     Dataset = pd.DataFrame()
@@ -126,6 +133,15 @@ def makeDataframe(X_train, Y_train):
     Dataset["Y_train"] = pd.Series(list(Y_train))
     return Dataset
 
+#pickle and compress
+def compressed_pickle(title, data):
+    with bz2.BZ2File(title + '.pbz2', 'w') as f:
+        pickle.dump(data,f)
+#decompress
+def decompress_pickle(file):
+    data = bz2.BZ2File(file, 'rb')
+    data = pickle.load(data)
+    return data
 
 def preprocessData():
     #import data
@@ -144,16 +160,22 @@ def preprocessData():
     X_train, Y_train = createNPArrays(trainSet,testSet)
     X_trainCentered = centerData(X_train)
     X_trainNormalized = normalizeData(X_train)
+    X_trainStandardized = standardizeData(X_train)
+    X_trainCN = normalizeData(X_trainCentered)
     
     #5 fold CV split
     rawSplitSet = makeDataframe(X_train,Y_train)
     centeredSplitSet = makeDataframe(X_trainCentered,Y_train)
     NormalizedSplitSet = makeDataframe(X_trainNormalized,Y_train)
+    StandardizedSplitSet = makeDataframe(X_trainStandardized,Y_train)
+    CNSplitSet = makeDataframe(X_trainCN, Y_train)
 
-    #save files
-    rawSplitSet.to_pickle("SavedArrays\\rawSplitSet.pkl")
-    centeredSplitSet.to_pickle("SavedArrays\\centeredSplitSet.pkl")
-    NormalizedSplitSet.to_pickle("SavedArrays\\normalizedSplitSet.pkl")
+    #compress and save files
+    compressed_pickle('SavedArrays\\rawSplitSet', rawSplitSet)
+    compressed_pickle('SavedArrays\\centeredSplitSet', centeredSplitSet)
+    compressed_pickle('SavedArrays\\normalizedSplitSet', NormalizedSplitSet)
+    compressed_pickle('SavedArrays\\standardizedSplitSet', StandardizedSplitSet)
+    compressed_pickle('SavedArrays\\CNSplitsSet', CNSplitSet)
 
-    return rawSplitSet,centeredSplitSet,NormalizedSplitSet
+    return rawSplitSet,centeredSplitSet,NormalizedSplitSet, StandardizedSplitSet, CNSplitSet
 

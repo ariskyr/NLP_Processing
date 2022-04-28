@@ -2,13 +2,12 @@ from pyclbr import Function
 import pandas as pd
 import numpy as np
 import os
-from sklearn.metrics import accuracy_score
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 import re
 from matplotlib import pyplot as plt
-from sklearn.model_selection import KFold, cross_val_score
+from sklearn.model_selection import KFold
 import Preprocess as pp
 
 #tf config
@@ -17,26 +16,28 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 #########
 #for the full preprocessing:
 #########
-#rawSplitSet,centeredSplitSet,NormalizedSplitSet = pp.preprocessData()
+#rawSplitSet,centeredSplitSet,NormalizedSplitSet, StandardizedSplitSet, CNSplitSet = pp.preprocessData()
 
 #########
 # if you dont wanna wait for the preprocessing of data
 #########
-rawData = pd.read_pickle("SavedArrays\\rawSplitSet.pkl")
-#centeredData = pd.read_pickle("SavedArrays\\centeredSplitSet.pkl")
-#normalizedData = pd.read_pickle("SavedArrays\\normalizedSplitSet.pkl")
+#rawData = pp.decompress_pickle("SavedArrays\\rawSplitSet.pbz2")
+centeredData = pp.decompress_pickle("SavedArrays\\centeredSplitSet.pbz2")
+#normalizedData = pp.decompress_pickle("SavedArrays\\normalizedSplitSet.pbz2")
+#standardizedData = pp.decompress_pickle("SavedArrays\\standardizedSplitSet.pbz2")
+#CNData = pp.decompress_pickle("SavedArrays\\CNSplitsSet.pbz2")
 
-X_data = rawData['X_train'].to_numpy()
-Y_data = rawData['Y_train'].to_numpy()
+X_data = centeredData['X_train'].to_numpy()
+Y_data = centeredData['Y_train'].to_numpy()
 X_data = np.stack(X_data)
 Y_data = np.stack(Y_data)
 
 # Model configuration
-batch_size = 64
+batch_size = 32
 loss_function = tf.keras.losses.BinaryCrossentropy(from_logits=False)
-no_classes = 100
-no_epochs = 40
-optimizer = tf.keras.optimizers.Adam(lr=0.001)
+no_classes = 20
+no_epochs = 100
+optimizer = tf.keras.optimizers.SGD(learning_rate=0.001)
 verbosity = 2
 num_folds = 5
 
@@ -46,7 +47,7 @@ loss_per_fold = []
 mse_per_fold = []
 
 #K-fold Cross Validator from scikit
-kfold = KFold(n_splits=num_folds, shuffle=False)
+kfold = KFold(n_splits=num_folds, shuffle=True)
 
 #Model
 fold = 1
@@ -54,7 +55,7 @@ for train,test in kfold.split(X_data, Y_data):
     #architecture
     inputs = keras.Input(shape=(8520))
     dense1 = layers.Dense(20,activation='relu')(inputs)
-    outputs = layers.Dense(20,activation='sigmoid')(dense1)
+    outputs = layers.Dense(no_classes,activation='sigmoid')(dense1)
     model = keras.Model(inputs=inputs,outputs=outputs,name='DeliciousMIL_model')
 
     #compile model
