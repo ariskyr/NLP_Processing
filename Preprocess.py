@@ -6,7 +6,7 @@ import re
 from sklearn.preprocessing import MinMaxScaler,StandardScaler
 
 #variables
-Path = "DeliciousMIL\Data\\"
+PATH = "DeliciousMIL\\Data\\"
 
 """
 Make a vocabs and labels dictionary that looks like:
@@ -16,7 +16,7 @@ Make a vocabs and labels dictionary that looks like:
 """
 def importTxt(filename):
     Dict = {}
-    with open((Path+str(filename)), "r") as file:
+    with open((PATH+str(filename)), "r") as file:
         for line in file:
             (val,key) = line.split(",")
             Dict[int(key)] = val,int(key)
@@ -32,11 +32,11 @@ import test and train datasets into dictionary:
 def importSet(filename):
     #initialize trainData dictionary
     sentenceDict = {}
-    numDataLines = sum(1 for line in open((Path+str(filename))))
+    numDataLines = sum(1 for line in open((PATH+str(filename))))
     Dataset = {"Line " +str(List1): sentenceDict for List1 in range(1,numDataLines+1)}
 
     DataLine = 0
-    with open((Path+str(filename)), "r") as DataFile:
+    with open((PATH+str(filename)), "r") as DataFile:
         for line in DataFile:
             DataLine += 1
             #line into list separated by whitespacce
@@ -92,8 +92,8 @@ def importData():
     labels = importTxt("labels.txt")
     trainSet = importSet("train-data.dat")
     testSet = importSet("test-data.dat")
-    trainLabels = np.loadtxt(Path+str("train-label.dat")).astype(int)
-    testLabels = np.loadtxt(Path+str("test-label.dat")).astype(int)
+    trainLabels = np.loadtxt(PATH+str("train-label.dat")).astype(int)
+    testLabels = np.loadtxt(PATH+str("test-label.dat")).astype(int)
     return vocabs,labels,trainSet,testSet,trainLabels,testLabels
 
 #merge the 2 datasets

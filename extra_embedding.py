@@ -1,45 +1,24 @@
 import os
 import numpy as np
 import tensorflow as tf
-import tensorflow_addons as tfa
 from tensorflow import keras
-from tensorflow.keras import layers
-from tensorflow.keras.regularizers import l2
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-from matplotlib import pyplot as plt
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import KFold
+from matplotlib import pyplot as plt
 import preprocess as pp
 
-#tf config
+# tf config
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
-#########
-#for the full preprocessing:
-#########
-#rawSplitSet,centeredSplitSet,NormalizedSplitSet, StandardizedSplitSet, CNSplitSet = pp.preprocessData()
-
-#########
-# if you dont wanna wait for the preprocessing of data
-#########
-#rawData = pp.decompress_pickle("SavedArrays\\rawSplitSet.pbz2")
-centeredData = pp.decompress_pickle("SavedArrays\\centeredSplitSet.pbz2")
-#normalizedData = pp.decompress_pickle("SavedArrays\\normalizedSplitSet.pbz2")
-#standardizedData = pp.decompress_pickle("SavedArrays\\standardizedSplitSet.pbz2")
-#CNData = pp.decompress_pickle("SavedArrays\\CNSplitsSet.pbz2")
-
-X_data = centeredData['X_train'].to_numpy()
-Y_data = centeredData['Y_train'].to_numpy()
-X_data = np.stack(X_data)
-Y_data = np.stack(Y_data)
 
 # Model configuration
 BATCH_SIZE = 16
 LOSS_FUNCTION = tf.keras.losses.BinaryCrossentropy(from_logits=False)
 NO_CLASSES = 20
-NO_EPOCHS = 200
-OPTIMIZER = tf.keras.optimizers.SGD(learning_rate=0.1, momentum=0.6)
+NO_EPOCHS = 50
+OPTIMIZER = tf.keras.optimizers.SGD(learning_rate=0.001)
 VERBOSITY = 2
 NO_FOLDS = 5
 
@@ -48,41 +27,56 @@ acc_per_fold = []
 loss_per_fold = []
 mse_per_fold = []
 
+vocabs,labels,trainSet,testSet,trainLabels,testLabels = pp.importData()
+Y_data = np.vstack([trainLabels, testLabels])
+# make list of words and pad them with 0s
+def preprocess_list(dataset):
+    sentences = []
+    for line in dataset:
+        # for each document, get all words from all sentences
+        sentences.append(sum(dataset[line].values(), []))
+    # 270 is hard coded but it was taken as the maximum length in both datasets
+    pad_corp = pad_sequences(sentences, maxlen=270, padding='post', value=0)
+    return pad_corp
+
+padded_txt = preprocess_list(trainSet)
+X_data = np.vstack([padded_txt, preprocess_list(testSet)])
+
 #K-fold Cross Validator from scikit
 kfold = KFold(n_splits=NO_FOLDS, shuffle=True)
 
 #Model
 fold = 1
 for train,test in kfold.split(X_data, Y_data):
-    #architecture
-    inputs = keras.Input(shape=(8520,))
-    x = layers.Dense(4270,activation='relu', kernel_regularizer=l2(0.5))(inputs)
-    x = layers.Dense(4270,activation='relu', kernel_regularizer=l2(0.5))(x)
-    outputs = layers.Dense(NO_CLASSES,activation='sigmoid')(x)
-    model = keras.Model(inputs=inputs,outputs=outputs,name='DeliciousMIL_model')
+    inputs = keras.Input(shape=(270,),dtype='float64')
+    word_embedding = keras.layers.Embedding(input_dim=8520, output_dim=31, input_length=270)(inputs)
+    x = keras.layers.LSTM(32)(word_embedding)
+    x = keras.layers.Flatten()(x)
+    outputs = keras.layers.Dense(NO_CLASSES,activation='sigmoid')(x)
+    embed_model = keras.Model([inputs],outputs, name='embedded_words_model')
 
-    print(model.summary())
-    #compile model
-    model.compile(loss=LOSS_FUNCTION,
-                optimizer=OPTIMIZER,
-                metrics=['accuracy', 'mse'],
-                )
+    print(embed_model.summary())
+
+    embed_model.compile(loss=LOSS_FUNCTION,
+                    optimizer=OPTIMIZER,
+                    metrics=['accuracy', 'mse'],
+                    )
     
     print('-----------------------------------------------------------------------------')
     print(f'Training for fold {fold} ...')
-
+    
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=25)
     mc = ModelCheckpoint('modelA4a.h5', monitor='val_accuracy', mode='max', verbose=0, save_best_only=True)
     
-    history = model.fit(X_data[train], Y_data[train],
-                        batch_size=BATCH_SIZE,
-                        epochs=NO_EPOCHS,
-                        verbose=VERBOSITY,
-                        validation_data=(X_data[test], Y_data[test]),
-                        callbacks=[es,mc])
-    
-    scores = model.evaluate(X_data[test], Y_data[test], verbose=2)
-    print(f'Score for fold {fold}: {model.metrics_names[0]} of {scores[0]}; {model.metrics_names[1]} of {scores[1]*100}%; {model.metrics_names[2]} of {scores[2]}.')
+    history = embed_model.fit(X_data[train], Y_data[train],
+                                batch_size=BATCH_SIZE,
+                                epochs=NO_EPOCHS,
+                                verbose=VERBOSITY,
+                                validation_data=(X_data[test], Y_data[test]),
+                                callbacks=[es,mc])
+
+    scores = embed_model.evaluate(X_data[test], Y_data[test], verbose=2)
+    print(f'Score for fold {fold}: {embed_model.metrics_names[0]} of {scores[0]}; {embed_model.metrics_names[1]} of {scores[1]*100}%; {embed_model.metrics_names[2]} of {scores[2]}.')
     loss_per_fold.append(scores[0])
     acc_per_fold.append(scores[1]*100)
     mse_per_fold.append(scores[2])
@@ -130,5 +124,4 @@ plt.xlabel('epoch')
 plt.legend(['train','test'], loc='upper left')
 plt.show()
 
-
-x= 0
+X=0
