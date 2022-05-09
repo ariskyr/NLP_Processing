@@ -4,7 +4,7 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 from tensorflow import keras
 from tensorflow.keras import layers
-from tensorflow.keras.regularizers import l2
+from tensorflow.keras.regularizers import L2
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from matplotlib import pyplot as plt
 from sklearn.model_selection import KFold
@@ -24,13 +24,13 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # if you dont wanna wait for the preprocessing of data
 #########
 #rawData = pp.decompress_pickle("SavedArrays\\rawSplitSet.pbz2")
-centeredData = pp.decompress_pickle("SavedArrays\\centeredSplitSet.pbz2")
+#centeredData = pp.decompress_pickle("SavedArrays\\centeredSplitSet.pbz2")
 #normalizedData = pp.decompress_pickle("SavedArrays\\normalizedSplitSet.pbz2")
 #standardizedData = pp.decompress_pickle("SavedArrays\\standardizedSplitSet.pbz2")
-#CNData = pp.decompress_pickle("SavedArrays\\CNSplitsSet.pbz2")
+CNData = pp.decompress_pickle("SavedArrays\\CNSplitsSet.pbz2")
 
-X_data = centeredData['X_train'].to_numpy()
-Y_data = centeredData['Y_train'].to_numpy()
+X_data = CNData['X_train'].to_numpy()
+Y_data = CNData['Y_train'].to_numpy()
 X_data = np.stack(X_data)
 Y_data = np.stack(Y_data)
 
@@ -38,8 +38,8 @@ Y_data = np.stack(Y_data)
 BATCH_SIZE = 16
 LOSS_FUNCTION = tf.keras.losses.BinaryCrossentropy(from_logits=False)
 NO_CLASSES = 20
-NO_EPOCHS = 200
-OPTIMIZER = tf.keras.optimizers.SGD(learning_rate=0.1, momentum=0.6)
+NO_EPOCHS = 100
+OPTIMIZER = tf.keras.optimizers.SGD(learning_rate=0.05, momentum=0.6)
 VERBOSITY = 2
 NO_FOLDS = 5
 
@@ -56,8 +56,8 @@ fold = 1
 for train,test in kfold.split(X_data, Y_data):
     #architecture
     inputs = keras.Input(shape=(8520,))
-    x = layers.Dense(4270,activation='relu', kernel_regularizer=l2(0.5))(inputs)
-    x = layers.Dense(4270,activation='relu', kernel_regularizer=l2(0.5))(x)
+    x = layers.Dense(200,activation='relu')(inputs)
+    x = layers.Dense(4270,activation='relu')(x)
     outputs = layers.Dense(NO_CLASSES,activation='sigmoid')(x)
     model = keras.Model(inputs=inputs,outputs=outputs,name='DeliciousMIL_model')
 
@@ -65,21 +65,22 @@ for train,test in kfold.split(X_data, Y_data):
     #compile model
     model.compile(loss=LOSS_FUNCTION,
                 optimizer=OPTIMIZER,
-                metrics=['accuracy', 'mse'],
+                metrics=['binary_accuracy', 'mse'],
                 )
     
     print('-----------------------------------------------------------------------------')
     print(f'Training for fold {fold} ...')
 
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=25)
-    mc = ModelCheckpoint('modelA4a.h5', monitor='val_accuracy', mode='max', verbose=0, save_best_only=True)
+    mc = ModelCheckpoint('modelA4a.h5', monitor='val_binary_accuracy', mode='max', verbose=0, save_best_only=True)
     
     history = model.fit(X_data[train], Y_data[train],
                         batch_size=BATCH_SIZE,
                         epochs=NO_EPOCHS,
                         verbose=VERBOSITY,
                         validation_data=(X_data[test], Y_data[test]),
-                        callbacks=[es,mc])
+                        callbacks=[es,mc]
+                        )
     
     scores = model.evaluate(X_data[test], Y_data[test], verbose=2)
     print(f'Score for fold {fold}: {model.metrics_names[0]} of {scores[0]}; {model.metrics_names[1]} of {scores[1]*100}%; {model.metrics_names[2]} of {scores[2]}.')
@@ -104,8 +105,8 @@ print(f'> MSE: {np.mean(mse_per_fold)}')
 print('------------------------------------------------------------------------')
 
 # == Plot model history accurracy ==
-plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
+plt.plot(history.history['binary_accuracy'])
+plt.plot(history.history['val_binary_accuracy'])
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')

@@ -17,8 +17,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 BATCH_SIZE = 16
 LOSS_FUNCTION = tf.keras.losses.BinaryCrossentropy(from_logits=False)
 NO_CLASSES = 20
-NO_EPOCHS = 50
-OPTIMIZER = tf.keras.optimizers.SGD(learning_rate=0.001)
+NO_EPOCHS = 100
+OPTIMIZER = tf.keras.optimizers.SGD(learning_rate=0.05,momentum=0.6)
 VERBOSITY = 2
 NO_FOLDS = 5
 
@@ -59,7 +59,7 @@ for train,test in kfold.split(X_data, Y_data):
 
     embed_model.compile(loss=LOSS_FUNCTION,
                     optimizer=OPTIMIZER,
-                    metrics=['accuracy', 'mse'],
+                    metrics=['binary_accuracy', 'mse'],
                     )
     
     print('-----------------------------------------------------------------------------')
@@ -98,8 +98,8 @@ print(f'> MSE: {np.mean(mse_per_fold)}')
 print('------------------------------------------------------------------------')
 
 # == Plot model history accurracy ==
-plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
+plt.plot(history.history['binary_accuracy'])
+plt.plot(history.history['val_binary_accuracy'])
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
